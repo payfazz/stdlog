@@ -10,15 +10,12 @@ then every call to Print is encoded to JSON String.
 package stdlog
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
-	"reflect"
-	"runtime"
 	"strconv"
-	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/payfazz/go-oneliner"
 )
@@ -31,14 +28,19 @@ type Logger struct {
 
 var (
 	// Out is wrapper of os.Stdout.
-	Out = new(os.Stdout)
+	Out *Logger
 
 	// Err is wrapper of os.Stderr.
-	Err = new(os.Stderr)
+	Err *Logger
 )
 
-func new(b io.Writer) *Logger {
+func init() {
 	onelines, _ := strconv.ParseBool(os.Getenv("OnelineLog"))
+	Out = new(os.Stdout, onelines)
+	Err = new(os.Stderr, onelines)
+}
+
+func new(b io.Writer, onelines bool) *Logger {
 	if onelines {
 		b = oneliner.Wrap(b)
 	}
@@ -53,38 +55,17 @@ func new(b io.Writer) *Logger {
 //
 // Print always ended with newline.
 func (l *Logger) Print(v ...interface{}) {
-	var s string
-	if len(v) == 1 {
-		if s2, ok := v[0].(string); ok {
-			s = s2
-			if s[len(s)-1] != '\n' {
-				s += "\n"
-			}
-		}
+	buff := getBuffer()
+	buff.WriteString(fmt.Sprint(v...))
+	if buff.Bytes()[buff.Len()-1] != '\n' {
+		buff.WriteByte('\n')
 	}
-	if s == "" {
-		sb := strings.Builder{}
-		sb.WriteString(fmt.Sprint(v...))
-		if sb.String()[sb.Len()-1] != '\n' {
-			sb.WriteByte('\n')
-		}
-		s = sb.String()
-	}
-
-	// peform unsafe zero-copy conversion from string to byte slice
-	sHeader := *(*reflect.StringHeader)(unsafe.Pointer(&s))
-	bytes := *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
-		Data: sHeader.Data,
-		Len:  sHeader.Len,
-		Cap:  sHeader.Len,
-	}))
 
 	l.m.Lock()
-	l.b.Write(bytes) // safe because Write only *read* the content
+	l.b.Write(buff.Bytes())
 	l.m.Unlock()
 
-	// make sure s live until here
-	runtime.KeepAlive(s)
+	putBuffer(buff)
 }
 
 // O is shortcut to Out.Print.
@@ -95,4 +76,19 @@ func O(v ...interface{}) {
 // E is shortcut to Err.Print.
 func E(v ...interface{}) {
 	Err.Print(v...)
+}
+
+var pool sync.Pool
+
+func getBuffer() *bytes.Buffer {
+	if x := pool.Get(); x != nil {
+		b := x.(*bytes.Buffer)
+		b.Reset()
+		return b
+	}
+	return &bytes.Buffer{}
+}
+
+func putBuffer(b *bytes.Buffer) {
+	pool.Put(b)
 }
