@@ -20,6 +20,18 @@ import (
 	"github.com/payfazz/go-oneliner"
 )
 
+// Printer is interface for printing log
+//
+// NOTE: log.Logger implement this interface
+type Printer interface {
+	// Print the arguments. Arguments are handled in the manner of fmt.Print.
+	//
+	// Print is safe called from multiple goroutine, it guarantees to serialize access to the Writer.
+	//
+	// Print always ended with newline.
+	Print(...interface{})
+}
+
 // Logger represent logging object.
 type Logger struct {
 	m sync.Mutex
@@ -27,6 +39,14 @@ type Logger struct {
 }
 
 var (
+	_ io.Writer = (*Logger)(nil)
+	_ Printer   = (*Logger)(nil)
+)
+
+var (
+	// Onelines is derived from OnelineLog env variable according to strconv.ParseBool
+	Onelines bool
+
 	// Out is wrapper of os.Stdout.
 	Out *Logger
 
@@ -35,12 +55,13 @@ var (
 )
 
 func init() {
-	onelines, _ := strconv.ParseBool(os.Getenv("OnelineLog"))
-	Out = new(os.Stdout, onelines)
-	Err = new(os.Stderr, onelines)
+	Onelines, _ = strconv.ParseBool(os.Getenv("OnelineLog"))
+	Out = New(os.Stdout, Onelines)
+	Err = New(os.Stderr, Onelines)
 }
 
-func new(b io.Writer, onelines bool) *Logger {
+// New create new logger that write to b, if onelines
+func New(b io.Writer, onelines bool) *Logger {
 	if onelines {
 		b = oneliner.Wrap(b)
 	}
@@ -49,11 +70,7 @@ func new(b io.Writer, onelines bool) *Logger {
 	}
 }
 
-// Print the arguments. Arguments are handled in the manner of fmt.Print.
-//
-// Print is safe called from multiple goroutine, it guarantees to serialize access to the Writer.
-//
-// Print always ended with newline.
+// Print implement Printer interface
 func (l *Logger) Print(v ...interface{}) {
 	buff := getBuffer()
 	buff.WriteString(fmt.Sprint(v...))
@@ -61,11 +78,17 @@ func (l *Logger) Print(v ...interface{}) {
 		buff.WriteByte('\n')
 	}
 
-	l.m.Lock()
-	l.b.Write(buff.Bytes())
-	l.m.Unlock()
+	l.Write(buff.Bytes())
 
 	putBuffer(buff)
+}
+
+// Write implement io.Writer interface
+func (l *Logger) Write(p []byte) (int, error) {
+	l.m.Lock()
+	n, err := l.b.Write(p)
+	l.m.Unlock()
+	return n, err
 }
 
 // O is shortcut to Out.Print.

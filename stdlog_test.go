@@ -8,7 +8,7 @@ import (
 
 func TestLogger1(t *testing.T) {
 	buff := &bytes.Buffer{}
-	a := new(buff, false)
+	a := New(buff, false)
 	a.Print("test")
 	a.Print("test", "test")
 	a.Print("test\n")
@@ -20,7 +20,7 @@ func TestLogger1(t *testing.T) {
 
 func TestLogger2(t *testing.T) {
 	buff := &bytes.Buffer{}
-	a := new(buff, true)
+	a := New(buff, true)
 	a.Print("test")
 	a.Print("test", "test")
 	a.Print("test\n")
@@ -31,7 +31,7 @@ func TestLogger2(t *testing.T) {
 }
 
 func BenchmarkWithoutNewline(b *testing.B) {
-	a := new(ioutil.Discard, false)
+	a := New(ioutil.Discard, false)
 	for i := 0; i < b.N; i++ {
 		a.Print("test")
 		a.Print("test", "test")
@@ -39,7 +39,7 @@ func BenchmarkWithoutNewline(b *testing.B) {
 }
 
 func BenchmarkWithNewline(b *testing.B) {
-	a := new(ioutil.Discard, false)
+	a := New(ioutil.Discard, false)
 	for i := 0; i < b.N; i++ {
 		a.Print("test\n")
 		a.Print("test", "test\n")
