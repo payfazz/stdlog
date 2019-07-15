@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"sync"
@@ -62,7 +63,7 @@ func init() {
 
 // New create new logger that write to b, if onelines
 func New(b io.Writer, onelines bool) *Logger {
-	if onelines {
+	if onelines && b != ioutil.Discard {
 		b = oneliner.Wrap(b)
 	}
 	return &Logger{
@@ -72,6 +73,10 @@ func New(b io.Writer, onelines bool) *Logger {
 
 // Print implement Printer interface
 func (l *Logger) Print(v ...interface{}) {
+	if l.b == ioutil.Discard {
+		return
+	}
+
 	buff := getBuffer()
 	buff.WriteString(fmt.Sprint(v...))
 	if buff.Bytes()[buff.Len()-1] != '\n' {
@@ -85,6 +90,10 @@ func (l *Logger) Print(v ...interface{}) {
 
 // Write implement io.Writer interface
 func (l *Logger) Write(p []byte) (int, error) {
+	if l.b == ioutil.Discard {
+		return len(p), nil
+	}
+
 	l.m.Lock()
 	n, err := l.b.Write(p)
 	l.m.Unlock()
