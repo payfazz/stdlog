@@ -39,6 +39,7 @@ type Logger struct {
 	b io.Writer
 }
 
+// static type check
 var (
 	_ io.Writer = (*Logger)(nil)
 	_ Printer   = (*Logger)(nil)
@@ -53,6 +54,9 @@ var (
 
 	// Err is wrapper of os.Stderr.
 	Err *Logger
+
+	// Discard nop Logger
+	Discard Printer = &discard{}
 )
 
 func init() {
@@ -124,3 +128,7 @@ func getBuffer() *bytes.Buffer {
 func putBuffer(b *bytes.Buffer) {
 	pool.Put(b)
 }
+
+type discard struct{}
+
+func (*discard) Print(v ...interface{}) {}
