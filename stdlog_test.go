@@ -2,7 +2,6 @@ package stdlog
 
 import (
 	"bytes"
-	"io/ioutil"
 	"testing"
 )
 
@@ -31,16 +30,20 @@ func TestLogger2(t *testing.T) {
 }
 
 func BenchmarkWithoutNewline(b *testing.B) {
-	a := New(ioutil.Discard, false)
+	buff := &bytes.Buffer{}
+	a := New(buff, false)
 	for i := 0; i < b.N; i++ {
+		buff.Reset()
 		a.Print("test")
 		a.Print("test", "test")
 	}
 }
 
 func BenchmarkWithNewline(b *testing.B) {
-	a := New(ioutil.Discard, false)
+	buff := &bytes.Buffer{}
+	a := New(buff, false)
 	for i := 0; i < b.N; i++ {
+		buff.Reset()
 		a.Print("test\n")
 		a.Print("test", "test\n")
 	}

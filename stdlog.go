@@ -56,7 +56,7 @@ var (
 	Err *Logger
 
 	// Discard nop Logger
-	Discard Printer = &discard{}
+	Discard Printer = New(ioutil.Discard, false)
 )
 
 func init() {
@@ -82,7 +82,15 @@ func (l *Logger) Print(v ...interface{}) {
 	}
 
 	buff := getBuffer()
-	buff.WriteString(fmt.Sprint(v...))
+
+	for _, value := range v {
+		if s, ok := value.(string); ok {
+			buff.WriteString(s)
+		} else {
+			buff.WriteString(fmt.Sprint(value))
+		}
+	}
+
 	if buff.Bytes()[buff.Len()-1] != '\n' {
 		buff.WriteByte('\n')
 	}
@@ -104,16 +112,6 @@ func (l *Logger) Write(p []byte) (int, error) {
 	return n, err
 }
 
-// O is shortcut to Out.Print.
-func O(v ...interface{}) {
-	Out.Print(v...)
-}
-
-// E is shortcut to Err.Print.
-func E(v ...interface{}) {
-	Err.Print(v...)
-}
-
 var pool sync.Pool
 
 func getBuffer() *bytes.Buffer {
@@ -128,7 +126,3 @@ func getBuffer() *bytes.Buffer {
 func putBuffer(b *bytes.Buffer) {
 	pool.Put(b)
 }
-
-type discard struct{}
-
-func (*discard) Print(v ...interface{}) {}
