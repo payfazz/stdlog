@@ -1,10 +1,8 @@
 /*
 Package stdlog provide log utilities.
 
-It follow https://12factor.net/logs.
-
 It parse environment variable "OnelineLog", if it true according to strconv.ParseBool,
-then every call to Print is encoded to JSON String.
+then every call to Print is encoded to JSON String to make sure that every log is one line.
 
 */
 package stdlog
@@ -25,11 +23,6 @@ import (
 //
 // NOTE: log.Logger implement this interface
 type Printer interface {
-	// Print the arguments. Arguments are handled in the manner of fmt.Print.
-	//
-	// Print is safe called from multiple goroutine, it guarantees to serialize access to the Writer.
-	//
-	// Print always ended with newline.
 	Print(...interface{})
 }
 
@@ -55,7 +48,7 @@ var (
 	// Err is wrapper of os.Stderr.
 	Err *Logger
 
-	// Discard nop Logger
+	// Discard is nop Logger
 	Discard Printer = New(ioutil.Discard, false)
 )
 
@@ -75,7 +68,13 @@ func New(b io.Writer, onelines bool) *Logger {
 	}
 }
 
-// Print implement Printer interface
+// Print from Printer interface
+//
+// Print the arguments. Arguments are handled in the manner of fmt.Print.
+//
+// Print is safe called from multiple goroutine, it guarantees to serialize access to the Writer.
+//
+// Print always ended with newline.
 func (l *Logger) Print(v ...interface{}) {
 	if l.b == ioutil.Discard {
 		return
@@ -100,7 +99,9 @@ func (l *Logger) Print(v ...interface{}) {
 	putBuffer(buff)
 }
 
-// Write implement io.Writer interface
+// Write from io.Writer interface
+//
+// Write is safe called from multiple goroutine, it guarantees to serialize access to the Writer.
 func (l *Logger) Write(p []byte) (int, error) {
 	if l.b == ioutil.Discard {
 		return len(p), nil
