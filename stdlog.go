@@ -68,6 +68,16 @@ func New(b io.Writer, onelines bool) *Logger {
 	}
 }
 
+// PrintOut wrap a call to Out.Print() method
+func PrintOut(v ...interface{}) {
+	Out.Print(v)
+}
+
+// PrintErr wrap a call to Err.Print() method
+func PrintErr(v ...interface{}) {
+	Err.Print(v)
+}
+
 // Print from Printer interface
 //
 // Print the arguments. Arguments are handled in the manner of fmt.Print.
