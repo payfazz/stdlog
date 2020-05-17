@@ -3,6 +3,7 @@ package stdlog
 import (
 	"fmt"
 	"io"
+	"log"
 	"sync"
 	"time"
 
@@ -26,7 +27,10 @@ type Logger struct {
 // if timestamp is true, every Print will prefixed with timestamp,
 // if onelines is true, every Write will formated into JSON string,
 func New(w io.Writer, prefix string, timestamp bool, onelines bool) *Logger {
-	if onelines {
+	if logger, ok := w.(*Logger); ok {
+		// already Logger, inherit the Writer
+		w = logger.Writer
+	} else if onelines {
 		w = oneliner.Wrap(w)
 	}
 
@@ -89,4 +93,18 @@ func (l *Logger) Print(v ...interface{}) {
 	l.Write(buff.Bytes())
 
 	putBuffer(buff)
+}
+
+// AsLogger return log.Logger instance with l as backend
+func (l *Logger) AsLogger() *log.Logger {
+	return log.New(wrapper{inner: l}, "", 0)
+}
+
+type wrapper struct {
+	inner *Logger
+}
+
+func (w wrapper) Write(p []byte) (n int, err error) {
+	w.inner.Print(string(p))
+	return len(p), nil
 }

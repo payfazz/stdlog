@@ -5,6 +5,7 @@ package stdlog
 
 import (
 	"errors"
+	"io"
 	"os"
 	"strconv"
 	"sync/atomic"
@@ -23,6 +24,11 @@ var (
 func init() {
 	_OnelineLog, _ = strconv.ParseBool(os.Getenv("OnelineLog"))
 	_NoTimestampLog, _ = strconv.ParseBool(os.Getenv("NoTimestampLog"))
+}
+
+// New2 is same as New but timestamp and onelines are inherited from env
+func New2(w io.Writer, prefix string) *Logger {
+	return New(os.Stdout, prefix, !_NoTimestampLog, _OnelineLog)
 }
 
 // OnelineLog is derived from "OnelineLog" env variable according to strconv.ParseBool
@@ -45,7 +51,7 @@ var (
 // Wrapped logger will behave acording to OnelineLog and NoTimestampLog env
 func Out() *Logger {
 	if out.Load() == nil {
-		out.Store(New(os.Stdout, "", !_NoTimestampLog, _OnelineLog))
+		out.Store(New2(os.Stdout, ""))
 	}
 
 	return out.Load().(*Logger)
@@ -66,7 +72,7 @@ func SetOut(l *Logger) error {
 // Wrapped logger will behave acording to OnelineLog and NoTimestampLog env
 func Err() *Logger {
 	if err.Load() == nil {
-		err.Store(New(os.Stderr, "", !_NoTimestampLog, _OnelineLog))
+		err.Store(New2(os.Stderr, ""))
 	}
 
 	return err.Load().(*Logger)
