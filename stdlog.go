@@ -28,7 +28,7 @@ func init() {
 
 // New2 is same as New but timestamp and onelines are inherited from env
 func New2(w io.Writer, prefix string) *Logger {
-	return New(os.Stdout, prefix, !_NoTimestampLog, _OnelineLog)
+	return New(w, prefix, !_NoTimestampLog, _OnelineLog)
 }
 
 // OnelineLog is derived from "OnelineLog" env variable according to strconv.ParseBool
