@@ -43,7 +43,7 @@ func NoTimestampLog() bool {
 
 var (
 	out atomic.Value // *Logger
-	err atomic.Value //*Logger
+	err atomic.Value // *Logger
 )
 
 // Out is wrapper of os.Stdout.
