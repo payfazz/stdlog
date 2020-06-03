@@ -18,18 +18,19 @@ type Logger struct {
 
 	prefix    string
 	timestamp bool
-
-	io.Writer
+	inner     io.Writer
 }
 
 // New create new logger that write to b,
 //
-// if timestamp is true, every Print will prefixed with timestamp,
+// if timestamp is true, every Print will prefixed with timestamp.
+//
 // if onelines is true, every Write will formated into JSON string,
+// this option is ignored when w is *Logger
 func New(w io.Writer, prefix string, timestamp bool, onelines bool) *Logger {
 	if logger, ok := w.(*Logger); ok {
 		// already Logger, inherit the Writer
-		w = logger.Writer
+		w = logger.inner
 	} else if onelines {
 		w = oneliner.Wrap(w)
 	}
@@ -37,8 +38,7 @@ func New(w io.Writer, prefix string, timestamp bool, onelines bool) *Logger {
 	return &Logger{
 		prefix:    prefix,
 		timestamp: timestamp,
-
-		Writer: w,
+		inner:     w,
 	}
 }
 
@@ -51,8 +51,9 @@ func (l *Logger) Write(p []byte) (n int, err error) {
 	}
 
 	l.mu.Lock()
-	n, err = l.Writer.Write(p)
-	l.mu.Unlock()
+	defer l.mu.Unlock()
+
+	n, err = l.inner.Write(p)
 
 	return
 }
@@ -95,16 +96,16 @@ func (l *Logger) Print(v ...interface{}) {
 	putBuffer(buff)
 }
 
-// AsLogger return log.Logger instance with l as backend
+// AsLogger return log.Logger instance with l as inner
 func (l *Logger) AsLogger() *log.Logger {
-	return log.New(wrapper{inner: l}, "", 0)
+	return log.New(asLoggerWrapper{inner: l}, "", 0)
 }
 
-type wrapper struct {
+type asLoggerWrapper struct {
 	inner *Logger
 }
 
-func (w wrapper) Write(p []byte) (n int, err error) {
+func (w asLoggerWrapper) Write(p []byte) (n int, err error) {
 	w.inner.Print(string(p))
 	return len(p), nil
 }

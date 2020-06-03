@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"sync"
 	"sync/atomic"
 )
 
@@ -16,75 +17,80 @@ type Printer interface {
 	Print(...interface{})
 }
 
-var (
-	_OnelineLog     bool
-	_NoTimestampLog bool
-)
-
-func init() {
-	_OnelineLog, _ = strconv.ParseBool(os.Getenv("OnelineLog"))
-	_NoTimestampLog, _ = strconv.ParseBool(os.Getenv("NoTimestampLog"))
-}
-
-// New2 is same as New but timestamp and onelines are inherited from env
-func New2(w io.Writer, prefix string) *Logger {
-	return New(w, prefix, !_NoTimestampLog, _OnelineLog)
-}
-
 // OnelineLog is derived from "OnelineLog" env variable according to strconv.ParseBool
 func OnelineLog() bool {
-	return _OnelineLog
+	onelineLog, _ := strconv.ParseBool(os.Getenv("OnelineLog"))
+	return onelineLog
 }
 
 // NoTimestampLog is derived from "NoTimestampLog" env variable according to strconv.ParseBool
 func NoTimestampLog() bool {
-	return _NoTimestampLog
+	noTimestampLog, _ := strconv.ParseBool(os.Getenv("NoTimestampLog"))
+	return noTimestampLog
+}
+
+// NewFromEnv is same as New but timestamp and onelines are inherited from env
+func NewFromEnv(w io.Writer, prefix string) *Logger {
+	return New(w, prefix, !NoTimestampLog(), OnelineLog())
 }
 
 var (
-	out atomic.Value // *Logger
-	err atomic.Value // *Logger
+	outOnce sync.Once
+	out     atomic.Value // *Logger
+
+	errOnce sync.Once
+	err     atomic.Value // *Logger
 )
 
-// Out is wrapper of os.Stdout.
+// Out return global out Logger
 //
-// Wrapped logger will behave acording to OnelineLog and NoTimestampLog env
+// if SetOut never called before, will return Logger that wrap os.Stdout and
+// behave acording to OnelineLog and NoTimestampLog
 func Out() *Logger {
-	if out.Load() == nil {
-		out.Store(New2(os.Stdout, ""))
-	}
+	outOnce.Do(func() {
+		SetOut(NewFromEnv(os.Stdout, ""))
+	})
 
 	return out.Load().(*Logger)
 }
 
-// SetOut set logger returned by Out, only can be called once before Out is called
+// SetOut set logger returned by Out
 func SetOut(l *Logger) error {
+	if l == nil {
+		panic("l cannot be nil")
+	}
+
 	if out.Load() != nil {
 		return errors.New("Out already set")
 	}
-
 	out.Store(l)
+
 	return nil
 }
 
-// Err is wrapper of os.Stderr.
+// Err return global err Logger
 //
-// Wrapped logger will behave acording to OnelineLog and NoTimestampLog env
+// if SetErr never called before, will return Logger that wrap os.Stderr and
+// behave acording to OnelineLog and NoTimestampLog
 func Err() *Logger {
-	if err.Load() == nil {
-		err.Store(New2(os.Stderr, ""))
-	}
+	errOnce.Do(func() {
+		SetErr(NewFromEnv(os.Stderr, ""))
+	})
 
 	return err.Load().(*Logger)
 }
 
-// SetErr set logger returned by Err, only can be called once before Err is called
+// SetErr set logger returned by Err
 func SetErr(l *Logger) error {
+	if l == nil {
+		panic("l cannot be nil")
+	}
+
 	if err.Load() != nil {
 		return errors.New("Out already set")
 	}
-
 	err.Store(l)
+
 	return nil
 }
 
