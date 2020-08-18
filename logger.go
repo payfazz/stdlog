@@ -79,10 +79,7 @@ func (l *Logger) Print(v ...interface{}) {
 		buff.WriteByte(' ')
 	}
 
-	for i, value := range v {
-		if i != 0 {
-			buff.WriteByte(' ')
-		}
+	for _, value := range v {
 		if s, ok := value.(string); ok {
 			buff.WriteString(s)
 		} else {
