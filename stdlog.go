@@ -23,15 +23,15 @@ func OnelineLog() bool {
 	return onelineLog
 }
 
-// NoTimestampLog is derived from "NoTimestampLog" env variable according to strconv.ParseBool
-func NoTimestampLog() bool {
-	noTimestampLog, _ := strconv.ParseBool(os.Getenv("NoTimestampLog"))
+// TimestampLog is derived from "TimestampLog" env variable according to strconv.ParseBool
+func TimestampLog() bool {
+	noTimestampLog, _ := strconv.ParseBool(os.Getenv("TimestampLog"))
 	return noTimestampLog
 }
 
 // NewFromEnv is same as New but timestamp and onelines are inherited from env
 func NewFromEnv(w io.Writer, prefix string) *Logger {
-	return New(w, prefix, !NoTimestampLog(), OnelineLog())
+	return New(w, prefix, TimestampLog(), OnelineLog())
 }
 
 var (
